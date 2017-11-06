@@ -35,3 +35,35 @@ def stream_contexts(filename):
         n = int(n)
         ccdict = json.loads(ccdict)
         yield word, ccdict
+
+def cosine_similarity(word1, word2):
+    length1 = len(word1)
+    length2 = len(word2)
+    d1 = np.sqrt(sum([word1[key]**2 for key in word1]))
+    d2 = np.sqrt(sum([word2[key]**2 for key in word2]))
+    num = 0
+    if length1 < length2:
+        for key in word1:
+            num += word1[key]*word2.get(key, 0)
+    else:
+        for key in word2:
+            num += word2[key]*word1.get(key, 0)
+    return num/(d1*d2)
+
+def nearest_word(word2vec):
+    result = {}
+    for key1 in word2vec:
+        for key2 in word2vec:
+            if key1 != key2:
+                if key1 not in result:
+                    result[key1] = [[key2, cosine_similarity(word2vec[key1], word2vec[key2])]]
+                else:
+                    result[key1].append([key2, cosine_similarity(word2vec[key1], word2vec[key2])])
+    return result
+
+def cos_sim(v1, v2):
+    dot_product = np.dot(v1, v2)
+    norm1 = np.linalg.norm(v1)
+    norm2 = np.linalg.norm(v2)
+    return dot_product/(norm1*norm2)
+        
