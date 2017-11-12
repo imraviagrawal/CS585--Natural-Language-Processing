@@ -7,6 +7,10 @@ Created on Sun Nov  5 20:43:44 2017
 """
 from collections import defaultdict, OrderedDict
 import numpy as np
+import re
+
+
+
 # Initiallizing seed list
 pos_seed_list = ["good", "nice", "love", "excellent", "fortunate", "correct", "superior"]
 neg_seed_list = ["bad", "nasty", "poor", "hate", "unfortunate", "wrong", "inferior"]
@@ -19,73 +23,51 @@ def readfile(filename):
     return tweets
 
 def count(tweets, pos_seed_list, neg_seed_list):
-    pos_count = defaultdict()
-    neg_count = defaultdict()
+    word_count = defaultdict(int)
+    pos_neg_count = {} 
+    for word in pos_seed_list + neg_seed_list:
+        pos_neg_count[word] = defaultdict(int)    
     for tweet in tweets:
-        countPositive = 1 # to avoid zero in pmi calculation
-        countNegative = 1 # to avoid zero in pmi calculation
-        for word in tweet:
-            if word in pos_seed_list:
-                countPositive += 1
-            if word in neg_seed_list:
-                countNegative += 1
-        
-        for word in tweet:
-            if word not in pos_count and word not in pos_seed_list:
-                pos_count[word] = countPositive
-            if word not in neg_count and word not in neg_seed_list:
-                neg_count[word] = countNegative
-            if word in pos_count and word not in pos_seed_list:
-                pos_count[word] += countPositive
-            if word in neg_count and word not in neg_seed_list:
-                neg_count[word] += countNegative
-    return pos_count, neg_count
+        for word in set(tweet):
+            word_count[word] += 1.0
+            if word not in pos_seed_list or word not in neg_seed_list:
+                for pos_word in pos_seed_list:
+                    if pos_word in tweet:
+                        pos_neg_count[pos_word][word] += 1.0
+                for neg_word in neg_seed_list:
+                    if neg_word in tweet:
+                        pos_neg_count[neg_word][word] +=1.0
+            
+    return pos_neg_count, word_count
 
-def PMI(word, pos_count, neg_count):
-    p_x_nearpos = pos_count[word]
-    p_x_nearneg = neg_count[word]
-    p_x = pos_count[word] + neg_count[word]
-    #print word
-    #print p_x
-    return max(0, np.log(p_x_nearpos/p_x)), max(0, np.log(p_x_nearneg/p_x))
-
-
-def polarity(tweets, pos_count, neg_count):
-    result = OrderedDict()
-    for tweet in tweets:
-        for word in tweet:
-            if (word[0] not in ['@', '#']) and (word not in pos_seed_list)\
-                and (word  not in neg_seed_list):
-                    pmi_word = PMI(word, pos_count, neg_count)
-                    result[word] = pmi_word
+def PMI(tweets, word, pos_neg_count, word_count, alpha = 1.0):
+    pos_pmi = 0
+    neg_pmi = 0
+    for pos_word in pos_seed_list:
+        numerator = (alpha + pos_neg_count[pos_word][word])*1.0/len(tweets) # zero return 1.0
+        denominator = ((alpha + word_count[word])/len(tweets))*((word_count[pos_word])/len(tweets))
+        pos_pmi += np.log(numerator/denominator) 
+  
+    for neg_word in neg_seed_list: 
+        numerator = (alpha + pos_neg_count[neg_word][word])/len(tweets) # zero return 1.0
+        denominator = ((alpha + word_count[word])/len(tweets))*((word_count[neg_word])/len(tweets))
+        neg_pmi += np.log(numerator/denominator)
     
+    return pos_pmi - neg_pmi
+
+
+def polarity(tweets, pos_neg_count, word_count, alpha):
+    result = {}
+    pos_seed_list = ["good", "nice", "love", "excellent", "fortunate", "correct", "superior"]
+    neg_seed_list = ["bad", "nasty", "poor", "hate", "unfortunate", "wrong", "inferior"]
+    for word in word_count:
+        if word[0] not in ['@', '#'] and word not in pos_seed_list and word not in neg_seed_list:
+            word_pmi = PMI(tweets, word, pos_neg_count, word_count, alpha)
+            result[word] = word_pmi
     return result
 
-def count_500more(tweets, pos_seed_list, neg_seed_list):
-    pos_count = defaultdict()
-    neg_count = defaultdict()
-    for tweet in tweets:
-        countPositive = 1 # to avoid zero in pmi calculation 
-        countNegative = 1 # to avoid zero in pmi calculation
-        for word in tweet:
-            if word in pos_seed_list:
-                countPositive += 1
-            if word in neg_seed_list:
-                countNegative += 1
-        
-        for word in tweet:
-            if word not in pos_count and word not in pos_seed_list:
-                pos_count[word] = countPositive
-            if word not in neg_count and word not in neg_seed_list:
-                neg_count[word] = countNegative
-            if word in pos_count and word not in pos_seed_list:
-                pos_count[word] += countPositive
-            if word in neg_count and word not in neg_seed_list:
-                neg_count[word] += countNegative
-    pos_count, neg_count = {k: v for k, v in pos_count.items() if v >= 0},{k: v for k, v in neg_count.items() if v >= 0}
-    return pos_count, neg_count
+
             
-                        
-                  
+                 
                 
                 

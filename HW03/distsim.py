@@ -50,16 +50,14 @@ def cosine_similarity(word1, word2):
             num += word2[key]*word1.get(key, 0)
     return num/(d1*d2)
 
-def nearest_word(word2vec):
-    result = {}
-    for key1 in word2vec:
-        for key2 in word2vec:
-            if key1 != key2:
-                if key1 not in result:
-                    result[key1] = [[key2, cosine_similarity(word2vec[key1], word2vec[key2])]]
-                else:
-                    result[key1].append([key2, cosine_similarity(word2vec[key1], word2vec[key2])])
-    return result
+def show_nearest(word_2_vec, w_vec, exclude_w, sim_metric):
+    word_similarity_score_list=[]
+    for word,vec in word_2_vec.iteritems():
+        if word not in exclude_w:
+            word_similarity_score_list.append((word,sim_metric(w_vec,vec)))
+    top_20_similar_words= sorted(word_similarity_score_list,key=lambda x:x[1],reverse=True)[0:20]
+    for (word,score) in top_20_similar_words:
+        print "Word = %s and similarity score = %s" %(word,score)
 
 def cos_sim(v1, v2):
     dot_product = np.dot(v1, v2)
